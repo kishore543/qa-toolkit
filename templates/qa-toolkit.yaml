@@ -1,0 +1,19 @@
+# qa-toolkit settings for one project.
+# Copy this file into the root folder of the project you are testing,
+# then change the example URLs to your real ones.
+#
+# NEVER put passwords, OTPs or tokens in this file.
+
+project: My Project
+
+# Websites that tests are ALLOWED to open.
+# "*.example.com" means any sub-domain, e.g. qa.example.com, dev.example.com
+allowed_hosts:
+  - staging.example.com
+  - qa.example.com
+  - localhost
+
+# Websites that are ALWAYS refused, even if listed above. Put production here.
+blocked_hosts:
+  - example.com
+  - www.example.com
