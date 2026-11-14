@@ -43,7 +43,19 @@ Paths: the toolkit folder is two levels above this skill's folder.
 
 6. **One test per Ready test case** in `tests/test_<feature>.py`:
    - name: `test_TC_01_<short_title_in_snake_case>`
-   - docstring: `"""TC-01 | R1 | Positive | High | <title>"""`
+   - docstring: a header line, then the numbered steps and the expected result,
+     copied from the sheet (the Jira bug reporter turns these into the ticket):
+     ```
+     """TC-01 | R1 | Positive | High | <title>
+
+     1. <step 1 from the sheet>
+     2. <step 2 from the sheet>
+     Expected: <expected result from the sheet>
+     """
+     ```
+     Put the test data values into the steps (e.g. `1. Enter username: student`)
+     so a developer can repeat them, but never a real password, OTP or token - write
+     `<from .env>` instead.
    - body: page-object calls in the same order as the manual steps, with `# Step n` comments
    - end: checks for **every part** of the Expected result
      (e.g. "heading shown; form gone; no error" = three checks)
