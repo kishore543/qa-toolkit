@@ -1,6 +1,6 @@
 ---
 name: automate
-description: Automate test cases from a test case sheet (CSV) as Playwright + Python (pytest) tests the way a QA engineer does - page objects, separate test data, one test per TC ID - then run them and build a plain-language HTML report. Use when someone asks to automate test cases, write automation scripts, or run the automation and get a report.
+description: Automate test cases from a test case sheet (CSV or Excel .xlsx) as Playwright + Python (pytest) tests the way a QA engineer does - page objects, separate test data, one test per TC ID - then run them and build a plain-language HTML report. Use when someone asks to automate test cases, write automation scripts, or run the automation and get a report.
 ---
 
 # Automate test cases (QA engineer style)
@@ -10,14 +10,18 @@ test case from the sheet, named after its TC ID, and the report shows the result
 of every test case in plain words.
 
 Paths: the toolkit folder is two levels above this skill's folder.
+- Sheet reader: `<toolkit>/scripts/read_cases.py` (CSV or Excel, any column names, all tabs)
 - Report script: `<toolkit>/scripts/make_report.py`
 - conftest template: `templates/conftest.py` (in this skill's folder)
 
 ## Steps
 
-1. **Pick the sheet.** Use the CSV the person names, or the newest file in
-   `test-cases/`. Tell them which one. Count the test cases: Ready vs Blocked.
+1. **Pick the sheet.** Use the CSV or Excel file the person names, or the newest file
+   in `test-cases/`. Run `python3 <toolkit>/scripts/read_cases.py <sheet>` to see what
+   it contains (tabs, test case count, blocked), and tell the person.
    Only `Ready` test cases are automated. `Blocked` ones are left for the report.
+   A big Excel workbook: ask which tabs to automate first instead of doing all at once.
+   Never edit the person's Excel file.
 
 2. **Check the setup.**
    - `qa-toolkit.yaml` must exist in the project root, and the website under test
@@ -41,10 +45,14 @@ Paths: the toolkit folder is two levels above this skill's folder.
    Real passwords, OTPs and tokens are read from environment variables (`.env`),
    never written in the code.
 
-6. **One test per Ready test case** in `tests/test_<feature>.py`:
-   - name: `test_TC_01_<short_title_in_snake_case>`
+6. **One test per Ready test case** in `tests/test_<feature>.py`
+   (for an Excel workbook: one test file per tab, e.g. `tests/test_super_admin.py`):
+   - name: the sheet's ID with `-` turned into `_`, then a short title:
+     `TC-01` -> `test_TC_01_<short_title>`, `SA-12` -> `test_SA_12_<short_title>`.
+     The report matches tests to the sheet by this ID, so never change or invent IDs.
    - docstring: a header line, then the numbered steps and the expected result,
-     copied from the sheet (the Jira bug reporter turns these into the ticket):
+     copied from the sheet (the Jira bug reporter turns these into the ticket).
+     Header: `<ID> | <Requirement, or Area if none> | <Type, or - if none> | <Priority> | <title>`
      ```
      """TC-01 | R1 | Positive | High | <title>
 
@@ -79,7 +87,7 @@ Paths: the toolkit folder is two levels above this skill's folder.
     the report will show it as "Not automated yet".
 
 11. **Build the report:**
-    `python3 <toolkit>/scripts/make_report.py --cases <the CSV>`
+    `python3 <toolkit>/scripts/make_report.py --cases <the CSV or Excel file>`
     It writes `reports/report.html`.
 
 12. **Summary in plain words:** how many test cases were automated, passed, failed,

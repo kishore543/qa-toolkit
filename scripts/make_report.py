@@ -1,23 +1,28 @@
 """qa-toolkit: build a plain-language HTML test report.
 
 It joins two things:
-  1. the test case sheet (CSV made by /qa-toolkit:cases)  -> WHAT should be tested
-  2. the pytest results (JUnit XML)                        -> WHAT happened
+  1. the test case sheet (CSV or Excel)  -> WHAT should be tested
+  2. the pytest results (JUnit XML)      -> WHAT happened
 
 Run from the project folder, after the tests:
     python3 -m pytest --junitxml=reports/results.xml
     python3 make_report.py --cases test-cases/login-test-cases.csv
+    python3 make_report.py --cases "Login Test Cases.xlsx"
 
+Test names are matched to sheet IDs: test_TC_01_... -> TC-01, test_SA_12_... -> SA-12.
 Writes reports/report.html - one file, open it in any browser, email it to anyone.
 """
 import argparse
 import base64
-import csv
 import datetime
 import html
 import os
 import re
+import sys
 import xml.etree.ElementTree as ET
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from read_cases import read_cases  # noqa: E402  (same folder: reads CSV and Excel)
 
 # Everyday words for the test types in the sheet.
 KIND = {
@@ -40,16 +45,10 @@ RESULT_STYLE = {
 
 # ---------- reading the inputs ----------
 
-def read_cases(path):
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        rows = list(csv.DictReader(f))
-    return [{k.strip().strip('"'): (v or "").strip() for k, v in row.items()} for row in rows]
-
-
 def tc_id_from_test_name(name):
-    """test_TC_01_login_with... -> TC-01"""
-    match = re.search(r"TC_(\d+)", name)
-    return "TC-%s" % match.group(1) if match else None
+    """test_TC_01_login_with... -> TC-01,  test_SA_12_register... -> SA-12,  test_E2E_03_... -> E2E-03"""
+    match = re.match(r"test_([A-Za-z][A-Za-z0-9]*)_(\d+)", name)
+    return "%s-%s" % (match.group(1).upper(), match.group(2)) if match else None
 
 
 def plain_failure(message):
@@ -96,7 +95,7 @@ def combine(cases, results):
     rows = []
     for case in cases:
         tc_id = case.get("ID", "")
-        run = results.get(tc_id)
+        run = results.get(tc_id.upper())
         if run:
             result, reason = run["result"], run["reason"]
         elif case.get("Status", "").lower().startswith("blocked"):
@@ -104,7 +103,7 @@ def combine(cases, results):
         else:
             result, reason = "Not automated", "No automated test exists for this test case yet."
         rows.append(dict(case, result=result, reason=reason))
-    extra = [tc for tc in results if tc not in {c.get("ID") for c in cases}]
+    extra = [tc for tc in results if tc not in {c.get("ID", "").upper() for c in cases}]
     return rows, extra
 
 
@@ -151,7 +150,16 @@ def build_html(title, rows, extra):
         for r in problems
     ) or '<p class="muted">No problems found. 🎉</p>'
 
-    # All test cases, grouped by requirement
+    # Group by requirement (R1, R2...) when the sheet has them, otherwise by Area / tab.
+    use_reqs = any(re.search(r"R\d+", r.get("Requirement", "")) for r in rows)
+    group_label = "Requirement" if use_reqs else "Area"
+
+    def groups_of(r):
+        if use_reqs:
+            return re.findall(r"R\d+", r.get("Requirement", ""))
+        return [r.get("Area") or r.get("Sheet") or "-"]
+
+    # All test cases
     table_rows = ""
     for r in rows:
         kind = KIND.get(r.get("Type", "").lower(), r.get("Type", ""))
@@ -160,18 +168,20 @@ def build_html(title, rows, extra):
             "<tr><td>%s</td><td><b>%s</b> %s<details><summary>Steps and expected result</summary>"
             "<p><b>Steps:</b><br>%s</p><p><b>Test data:</b><br>%s</p><p><b>Expected:</b> %s</p>"
             "</details>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-            % (esc(r.get("Requirement")), esc(r["ID"]), esc(r["Title"]), esc(r.get("Steps")),
+            % (esc(", ".join(groups_of(r))), esc(r["ID"]), esc(r["Title"]), esc(r.get("Steps")),
                esc(r.get("Test data")), esc(r.get("Expected result")), note, esc(kind),
                esc(r.get("Priority")), badge(r["result"]))
         )
 
-    # Requirement coverage
+    # Coverage per requirement / area
     reqs = {}
     for r in rows:
-        for req in re.findall(r"R\d+", r.get("Requirement", "")):
+        for req in groups_of(r):
             reqs.setdefault(req, []).append(r)
+    has_types = any(r.get("Type") for r in rows)
+    order = (lambda x: int(x[1:])) if use_reqs else None
     coverage_rows = ""
-    for req in sorted(reqs, key=lambda x: int(x[1:])):
+    for req in sorted(reqs, key=order) if use_reqs else reqs:
         items = reqs[req]
         passed = sum(1 for i in items if i["result"] == "Passed")
         failed = sum(1 for i in items if i["result"] == "Failed")
@@ -182,9 +192,12 @@ def build_html(title, rows, extra):
             state = badge("Passed")
         else:
             state = '<span class="badge blocked">⏸ Partly tested</span>'
-        edge_text = str(edge) if edge else '<span class="warn">0 - add edge cases</span>'
+        if not has_types:
+            edge_text = '<span class="muted">not marked in the sheet</span>'
+        else:
+            edge_text = str(edge) if edge else '<span class="warn">0 - add edge cases</span>'
         coverage_rows += "<tr><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>" % (
-            req, len(items), passed, edge_text, state)
+            esc(req), len(items), passed, edge_text, state)
 
     extra_html = ""
     if extra:
@@ -196,7 +209,7 @@ def build_html(title, rows, extra):
         passed=counts["Passed"], failed=counts["Failed"],
         blocked=counts["Blocked"] + counts["Skipped"], manual=counts["Not automated"],
         problems=problem_html, table_rows=table_rows, coverage_rows=coverage_rows,
-        extra=extra_html,
+        extra=extra_html, group=group_label, group_lower=group_label.lower(),
     )
 
 
@@ -245,16 +258,16 @@ TEMPLATE = """<!doctype html>
 <h2>Problems found</h2>
 {problems}
 
-<h2>Is every requirement tested?</h2>
+<h2>Is every {group_lower} tested?</h2>
 <div class="wrap"><table>
-<tr><th>Requirement</th><th>Test cases</th><th>Passed</th><th>Edge / wrong-input / security tests</th><th>State</th></tr>
+<tr><th>{group}</th><th>Test cases</th><th>Passed</th><th>Edge / wrong-input / security tests</th><th>State</th></tr>
 {coverage_rows}
 </table></div>
 
 <h2>All test cases</h2>
 {extra}
 <div class="wrap"><table>
-<tr><th>Req.</th><th>Test case</th><th>Kind</th><th>Priority</th><th>Result</th></tr>
+<tr><th>{group}</th><th>Test case</th><th>Kind</th><th>Priority</th><th>Result</th></tr>
 {table_rows}
 </table></div>
 
@@ -278,7 +291,8 @@ def main():
     parser.add_argument("--title", help="feature name (default: from the CSV file name)")
     args = parser.parse_args()
 
-    title = args.title or os.path.basename(args.cases).replace("-test-cases.csv", "").replace("-", " ").title()
+    name = os.path.splitext(os.path.basename(args.cases))[0]
+    title = args.title or re.sub(r"[-_ ]?test[-_ ]?cases$", "", name, flags=re.I).replace("-", " ").replace("_", " ").strip().title()
     rows, extra = combine(read_cases(args.cases), read_results(args.results))
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:

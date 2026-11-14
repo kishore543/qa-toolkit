@@ -4,7 +4,7 @@ Made by qa-toolkit. It does three things for every test:
   1. Opens a fresh browser page (add --headed to watch it).
   2. Safety guard: if a test tries to open a website that qa-toolkit.yaml
      does not allow, the page is stopped and the test fails.
-  3. If a test fails, saves a screenshot to reports/screenshots/TC-xx.png
+  3. If a test fails, saves a screenshot to reports/screenshots/<ID>.png
      so the report can show it.
 """
 import os
@@ -87,10 +87,11 @@ def page(browser, settings, request):
 
     result = getattr(request.node, "result_call", None)
     if result is not None and result.failed:
-        match = re.search(r"TC_(\d+)", request.node.name)
+        match = re.match(r"test_([A-Za-z][A-Za-z0-9]*)_(\d+)", request.node.name)  # test_SA_01_... -> SA-01
         if match:
             os.makedirs("reports/screenshots", exist_ok=True)
-            page.screenshot(path="reports/screenshots/TC-%s.png" % match.group(1), full_page=True)
+            tc_id = "%s-%s" % (match.group(1).upper(), match.group(2))
+            page.screenshot(path="reports/screenshots/%s.png" % tc_id, full_page=True)
     context.close()
     if blocked:
         pytest.fail("qa-toolkit safety guard BLOCKED a page that is not in allowed_hosts: "
