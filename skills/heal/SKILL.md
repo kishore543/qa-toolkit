@@ -23,6 +23,10 @@ Healing a real bug would hide it. So this skill only ever changes **locators**.
    - **Locator broken** - `Timeout ... waiting for locator(...)`, `element(s) not found`,
      `strict mode violation` (the locator now matches more than one element),
      or `expect(...).to_be_visible()` failing on a locator that matches **nothing**.
+     **Except:** if what the test looked for is a text the sheet promises (in any test
+     case's Expected result, e.g. heading "Certificate verified") and the screen shows
+     something else (e.g. "This certificate could not be verified"), it is **not** a broken
+     locator - the app did not show the promised result. Treat it as a possible app bug.
    - **Test out of step with the sheet** - the element was found and the app matches the
      test case sheet's Expected result, but the test's own expected value or test data
      says something else (the test was written or edited wrongly). **Do not heal.**

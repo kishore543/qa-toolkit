@@ -52,11 +52,37 @@ def tc_id_from_test_name(name):
     return "%s-%s" % (match.group(1).upper(), match.group(2)) if match else None
 
 
+def looked_for(message):
+    """What the test was looking for on the screen, in words, from Playwright's call log:
+    'waiting for get_by_role("heading", name="Certificate verified")' -> Certificate verified.
+    None when the test used a technical locator such as "#login-btn"."""
+    found = re.search(r"waiting for .*?(?:name|has_text)=[\"'](.+?)[\"']", message or "") \
+        or re.search(r"waiting for get_by_(?:text|label|placeholder|title|alt_text)\([\"'](.+?)[\"']", message or "")
+    return found.group(1) if found else None
+
+
+def screen_headings(message):
+    """Headings the screen showed at the moment of failure (newer Playwright puts a
+    snapshot of the screen in the error): 'heading "This certificate could not be verified"'."""
+    return re.findall(r'heading "([^"]+)"', message or "")
+
+
 def plain_failure(message):
     """Turn a technical error into 1-3 readable lines."""
-    text = (message or "").split("Call log:")[0]
+    full = message or ""
+    if "element(s) not found" in full:          # Playwright: something was not on the screen
+        wanted, shown = looked_for(full), screen_headings(full)
+        text = "Expected to see: %s. " % ('"%s"' % wanted if wanted else "an element the test looks for")
+        text += "What actually happened: it was not on the screen"
+        if shown:
+            text += " - the screen showed: " + "; ".join('"%s"' % h for h in shown[:3])
+        return text + "."
+    text = full.split("Call log:")[0]
     text = re.sub(r"^\w*(Error|Exception):\s*", "", text.strip())
     lines = [l.strip() for l in text.splitlines() if l.strip()]
+    # keep the tester's own message; drop pytest's "assert 404 != 404 / + where ..." lines
+    # and the screen snapshot lines ("- banner:")
+    lines = [l for l in lines if not re.match(r"^(assert |\+|where |- )", l)]
     readable = []
     for line in lines[:3]:
         line = re.sub(r"^Actual value:", "What actually happened:", line)
@@ -103,16 +129,25 @@ def simple(text):
     return " ".join(str(text or "").lower().split())
 
 
-def root_cause(message, sheet_expected):
+def root_cause(message, sheet_expected, whole_sheet=""):
     """Sort one failure into: environment / locator / out_of_step / bug.
 
     message        - the full error text from pytest
-    sheet_expected - the Expected result column from the test case sheet (the source of truth)
+    sheet_expected - the Expected result of this test case in the sheet (the source of truth)
+    whole_sheet    - the Expected results of all test cases (a test may first check something
+                     another case promises, e.g. "Certificate verified" before checking privacy)
     """
     text = simple(message)
     if any(sign in text for sign in ENVIRONMENT_SIGNS):
         return "environment"
     if any(sign in text for sign in LOCATOR_SIGNS):
+        # Not found - but WHAT was not found? If it is something the sheet promises
+        # ("'Certificate verified' with learner..."), the app did not show the expected
+        # result: a possible bug. A technical locator ("#login-btn") the sheet never
+        # mentions means the screen changed: the test needs updating.
+        wanted = looked_for(message)
+        if wanted and simple(wanted) in simple(sheet_expected + " " + whole_sheet):
+            return "bug"
         return "locator"
     wanted = tests_expected_value(message)
     if wanted and simple(wanted) not in simple(sheet_expected):
@@ -151,6 +186,7 @@ def read_results(path):
 
 def combine(cases, results):
     rows = []
+    whole_sheet = " ".join(c.get("Expected result", "") for c in cases)
     for case in cases:
         tc_id = case.get("ID", "")
         run = results.get(tc_id.upper())
@@ -158,7 +194,7 @@ def combine(cases, results):
         if run:
             result, reason = run["result"], run["reason"]
             if result == "Failed":
-                cause = root_cause(run["raw"], case.get("Expected result"))
+                cause = root_cause(run["raw"], case.get("Expected result") or "", whole_sheet)
         elif case.get("Status", "").lower().startswith("blocked"):
             result, reason = "Blocked", "Waiting for an answer: " + case["Status"].split("-", 1)[-1].strip()
         else:

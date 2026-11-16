@@ -1,7 +1,7 @@
 {
   "name": "qa-toolkit",
-  "version": "0.1.0",
-  "description": "Shared QA skills for testers and developers",
+  "version": "0.2.0",
+  "description": "QA skills: test plan, test cases, Playwright automation, self-heal, plain-language HTML + Excel report, with a safety guard that only allows test sites",
   "author": {
     "name": "Kishore"
   }
