@@ -10,7 +10,8 @@ Run from the project folder, after the tests:
     python3 make_report.py --cases "Login Test Cases.xlsx"
 
 Test names are matched to sheet IDs: test_TC_01_... -> TC-01, test_SA_12_... -> SA-12.
-Writes reports/report.html - one file, open it in any browser, email it to anyone.
+Writes reports/report.html - one file, open it in any browser, email it to anyone -
+and reports/report.xlsx with the same results (tabs: Summary, Problems, All test cases).
 """
 import argparse
 import base64
@@ -186,6 +187,22 @@ def verdict(counts, rows):
     return "pass", "ALL GOOD - every test case passed"
 
 
+def grouping(rows):
+    """Group by requirement (R1, R2...) when the sheet has them, otherwise by Area / tab.
+    Returns (use_reqs, label, groups_of) - groups_of(row) gives the groups of one test case."""
+    use_reqs = any(re.search(r"R\d+", r.get("Requirement", "")) for r in rows)
+
+    def groups_of(r):
+        if use_reqs:
+            return re.findall(r"R\d+", r.get("Requirement", ""))
+        return [r.get("Area") or r.get("Sheet") or "-"]
+
+    return use_reqs, ("Requirement" if use_reqs else "Area"), groups_of
+
+
+PROBLEM_ORDER = ["bug", "out_of_step", "locator", "environment"]  # possible app bugs first
+
+
 # ---------- building the HTML ----------
 
 def esc(text):
@@ -213,8 +230,7 @@ def build_html(title, rows, extra):
     now = datetime.datetime.now().strftime("%d %b %Y, %H:%M")
 
     # Problems first - possible app bugs at the top, then tests to fix, then environment
-    priority = ["bug", "out_of_step", "locator", "environment"]
-    problems = sorted((r for r in rows if r["result"] == "Failed"), key=lambda r: priority.index(r["cause"]))
+    problems = sorted((r for r in rows if r["result"] == "Failed"), key=lambda r: PROBLEM_ORDER.index(r["cause"]))
     problem_html = "".join(
         '<div class="problem %s"><h3>❌ %s &nbsp;%s</h3>'
         '<div class="cause"><b>Why it failed: %s</b><br>%s<br><b>What to do:</b> %s</div>'
@@ -225,14 +241,7 @@ def build_html(title, rows, extra):
         for r in problems
     ) or '<p class="muted">No problems found. 🎉</p>'
 
-    # Group by requirement (R1, R2...) when the sheet has them, otherwise by Area / tab.
-    use_reqs = any(re.search(r"R\d+", r.get("Requirement", "")) for r in rows)
-    group_label = "Requirement" if use_reqs else "Area"
-
-    def groups_of(r):
-        if use_reqs:
-            return re.findall(r"R\d+", r.get("Requirement", ""))
-        return [r.get("Area") or r.get("Sheet") or "-"]
+    use_reqs, group_label, groups_of = grouping(rows)
 
     # All test cases
     table_rows = ""
@@ -366,6 +375,120 @@ TEMPLATE = """<!doctype html>
 """
 
 
+# ---------- building the Excel report ----------
+
+# Cell colours for each result (background, text) - the same colours as the HTML report
+EXCEL_COLOURS = {
+    "Passed": ("E6F6EC", "11652F"), "Failed": ("FDEAEA", "A11B1B"),
+    "Blocked": ("FFF4E0", "8A5300"), "Skipped": ("FFF4E0", "8A5300"),
+    "Not automated": ("EEF0F4", "475467"),
+}
+
+
+def write_excel(path, title, rows, extra):
+    """Write the same results as an Excel file with 3 tabs: Summary, Problems, All test cases."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+    except ImportError:
+        print("Excel report skipped: openpyxl is not installed (python3 -m pip install openpyxl)")
+        return None
+
+    bold = Font(bold=True)
+    header_fill = PatternFill("solid", fgColor="EEF0F4")
+    wrap = Alignment(wrap_text=True, vertical="top")
+
+    def colour(cell, result):
+        back, text = EXCEL_COLOURS[result]
+        cell.fill = PatternFill("solid", fgColor=back)
+        cell.font = Font(bold=True, color=text)
+
+    def table(sheet, headers, data, widths, result_col=None):
+        """A header row, then the data rows: wrapped text, filters and a frozen header."""
+        sheet.append(headers)
+        start = sheet.max_row
+        for cell in sheet[start]:
+            cell.font, cell.fill = bold, header_fill
+        for values in data:
+            sheet.append(values)
+            for cell in sheet[sheet.max_row]:
+                cell.alignment = wrap
+            if result_col is not None:
+                colour(sheet.cell(sheet.max_row, result_col + 1), values[result_col])
+        for i, width in enumerate(widths):
+            sheet.column_dimensions[chr(65 + i)].width = width
+        return start
+
+    counts = {k: sum(1 for r in rows if r["result"] == k) for k in RESULT_STYLE}
+    v_css, v_text = verdict(counts, rows)
+    use_reqs, group_label, groups_of = grouping(rows)
+    book = Workbook()
+
+    # Tab 1: Summary - the verdict, the counts, and is every requirement / area tested?
+    summary = book.active
+    summary.title = "Summary"
+    summary.append(["Test report: " + title])
+    summary["A1"].font = Font(bold=True, size=16)
+    summary.append(["Run on " + datetime.datetime.now().strftime("%d %b %Y, %H:%M")])
+    summary.append([v_text])
+    summary["A3"].font = Font(bold=True, size=13, color={"fail": "A11B1B", "blocked": "8A5300", "pass": "11652F"}[v_css])
+    summary.append([])
+    summary.append(["Test cases", len(rows)])
+    for label, key in (("Passed", "Passed"), ("Failed", "Failed"), ("Blocked (waiting for answers)", "Blocked"),
+                       ("Not automated yet", "Not automated")):
+        summary.append([label, counts[key] + (counts["Skipped"] if key == "Blocked" else 0)])
+    for key in PROBLEM_ORDER:
+        n = sum(1 for r in rows if r["cause"] == key)
+        if n:
+            summary.append(["   of which: " + CAUSES[key][0], n])
+    summary.append([])
+    groups = {}
+    for r in rows:
+        for g in groups_of(r):
+            groups.setdefault(g, []).append(r)
+    names = sorted(groups, key=lambda x: int(x[1:])) if use_reqs else list(groups)
+    coverage = []
+    for g in names:
+        items = groups[g]
+        passed = sum(1 for i in items if i["result"] == "Passed")
+        failed = sum(1 for i in items if i["result"] == "Failed")
+        state = "Failed" if failed else ("Passed" if passed == len(items) else "Blocked")
+        coverage.append([g, len(items), passed, failed, state])
+    start = table(summary, [group_label, "Test cases", "Passed", "Failed", "State"], coverage, [34, 12, 10, 10, 14])
+    for row in range(start + 1, summary.max_row + 1):
+        cell = summary.cell(row, 5)
+        colour(cell, cell.value)
+        if cell.value == "Blocked":
+            cell.value = "Partly tested"
+    if extra:
+        summary.append([])
+        summary.append(["Automated tests not in the test case sheet: " + ", ".join(extra)])
+
+    # Tab 2: Problems - only the failures, possible app bugs first
+    problems = book.create_sheet("Problems")
+    failed = sorted((r for r in rows if r["result"] == "Failed"), key=lambda r: PROBLEM_ORDER.index(r["cause"]))
+    table(problems, ["ID", "Test case", "Why it failed", "What to do", "What we checked", "What went wrong"],
+          [[r["ID"], r["Title"], CAUSES[r["cause"]][0], CAUSES[r["cause"]][2], r.get("Expected result", ""),
+            r["reason"]] for r in failed] or [["", "No problems found.", "", "", "", ""]],
+          [10, 34, 26, 40, 44, 50])
+    problems.freeze_panes = "A2"
+
+    # Tab 3: All test cases - one row each, with filters so anyone can show e.g. only "Failed"
+    cases = book.create_sheet("All test cases")
+    table(cases, ["ID", group_label, "Test case", "Kind", "Priority", "Result", "Why it failed / note",
+                  "Expected result", "Steps", "Test data"],
+          [[r["ID"], ", ".join(groups_of(r)), r["Title"], KIND.get(r.get("Type", "").lower(), r.get("Type", "")),
+            r.get("Priority", ""), r["result"],
+            (CAUSES[r["cause"]][0] + ". " if r["cause"] else "") + (r["reason"] if r["result"] != "Passed" else ""),
+            r.get("Expected result", ""), r.get("Steps", ""), r.get("Test data", "")] for r in rows],
+          [10, 16, 36, 14, 10, 16, 44, 44, 44, 28], result_col=5)
+    cases.freeze_panes = "A2"
+    cases.auto_filter.ref = cases.dimensions
+
+    book.save(path)
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build a plain-language HTML test report")
     parser.add_argument("--cases", required=True, help="test case CSV file")
@@ -381,6 +504,9 @@ def main():
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(build_html(title, rows, extra))
     print("Report written: " + os.path.abspath(args.out))
+    excel = write_excel(os.path.splitext(args.out)[0] + ".xlsx", title, rows, extra)
+    if excel:
+        print("Excel report written: " + os.path.abspath(excel))
 
 
 if __name__ == "__main__":

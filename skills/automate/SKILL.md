@@ -88,11 +88,14 @@ Paths: the toolkit folder is two levels above this skill's folder.
 
 11. **Build the report:**
     `python3 <toolkit>/scripts/make_report.py --cases <the CSV or Excel file>`
-    It writes `reports/report.html`.
+    It writes `reports/report.html` and the same results as Excel, `reports/report.xlsx`
+    (tabs: Summary, Problems, All test cases). Every failure gets a reason: possible app
+    bug, test needs updating, test out of step with the sheet, or environment.
 
 12. **Summary in plain words:** how many test cases were automated, passed, failed,
-    blocked and not automated; the likely bugs; and the command to open the report:
-    `open reports/report.html`
+    blocked and not automated; how many failures are possible app bugs and how many are
+    test or environment problems; and the commands to open the reports:
+    `open reports/report.html` and `open reports/report.xlsx`
 
 ## Rules
 

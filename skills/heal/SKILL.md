@@ -74,6 +74,7 @@ Healing a real bug would hide it. So this skill only ever changes **locators**.
 8. **Rebuild the report** if the project has one:
    `python3 <toolkit>/scripts/make_report.py --cases <sheet>`
    (the toolkit folder is two levels above this skill's folder).
+   It rewrites both `reports/report.html` and `reports/report.xlsx`.
 
 9. **Summary in plain words:** how many failures, how many healed, how many tests were out of step with the sheet, how many are possible
    bugs, how many need a human. Tell the person to tell the developers about the
