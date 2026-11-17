@@ -1,0 +1,68 @@
+# qa-toolkit LOAD TEST settings for one project.
+# Copy this file into the project root, next to qa-toolkit.yaml, and change it.
+#
+# BEFORE EVERY RUN: tell the developers (when, how many users, how long).
+# A load test on a shared server can slow it down for everyone.
+#
+# NEVER put passwords, OTPs or tokens in this file - they go in .env.
+
+name: Learner journey load test
+
+# The site to load. Its host must be in allowed_hosts of qa-toolkit.yaml.
+base_url: https://staging.example.com
+
+# ---------- how many users, for how long ----------
+users: 100              # most users at the same time (the toolkit never goes above 100)
+ramp_up_seconds: 60     # add users slowly: 100 users over 60 s = about 2 new users a second
+duration_seconds: 300   # how long the whole test runs, ramp-up included
+think_time_seconds: [1, 3]   # each user pauses 1-3 s between steps, like a real person
+
+# ---------- logging in (leave out if the pages need no login) ----------
+# Test accounts: a CSV with a header row. Virtual user 1 gets row 1, user 2 row 2 ...
+# (fewer rows than users is fine - accounts are shared in turn, if the app allows that).
+# users_file: test-users.csv          # e.g. a column "email"
+#
+# Login steps run ONCE per virtual user, before the journey.
+# ${NAME} is filled from: the user's row in users_file, values saved earlier, or .env.
+# save: keeps a value from the reply - "data.access_token" means reply -> data -> access_token.
+# login:
+#   - name: Log in with email and OTP
+#     method: POST
+#     path: /api/auth/verify-otp
+#     json: {email: "${email}", otp: "${TEST_OTP}"}     # TEST_OTP=... goes in .env
+#     expect_status: 200
+#     save: {token: data.access_token}
+#
+# Then use the saved value in the journey steps:
+#     headers: {Authorization: "Bearer ${token}"}
+# (If the app logs in with a cookie instead of a token, nothing extra is needed -
+#  each virtual user keeps its own cookies, like a browser.)
+#
+# More step options (login steps and journey steps):
+#   multipart: {field: value}    form fields sent like a browser <form> (FormData), in this order
+#   expect_text: '"otpSent"'     these words must be in the reply
+#   fail_if_text: 're:"error":"([^"]*)'   these must NOT be - many apps answer 200 OK with an
+#                                error inside; 're:' = a pattern, its (...) part is quoted in the report
+#   follow_redirects: false      a jump to another page (e.g. back to /login) counts as the answer,
+#                                so expect_status: 200 catches "not logged in"
+#   save: {home: 're:"redirectUrl":"([^"]+)"'}   save from the reply text instead of JSON
+
+# ---------- what every user does ----------
+# The journey each virtual user repeats, top to bottom, until the time is up.
+# Each step is one request the browser would send. Find them in the browser:
+# DevTools (F12) -> Network tab -> do the action -> look at the requests.
+steps:
+  - name: Open home page
+    method: GET
+    path: /
+
+  - name: Search courses
+    method: GET
+    path: /api/courses?search=safety
+    expect_status: 200          # anything else counts as an error
+
+# ---------- pass / fail rules ----------
+# The report says PASSED only if every rule holds.
+limits:
+  p95_ms: 2000          # 95 of every 100 requests must answer faster than 2 seconds
+  max_error_percent: 1  # at most 1 request in 100 may fail

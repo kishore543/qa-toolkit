@@ -13,6 +13,18 @@ allowed_hosts:
   - qa.example.com
   - localhost
 
+# Websites LOAD TESTS may hit (many users at once). Stricter: a site must be here AND above.
+# Only your own staging/QA servers, and tell the developers before every run.
+# Never a public site you don't own. If this list is missing, only localhost is allowed.
+load_test_hosts:
+  - localhost
+
+# Websites SECURITY CHECKS may test. Stricter: a site must be here AND in allowed_hosts.
+# Only sites your team owns, QA/staging only, and tell the developers first.
+# If this list is missing, only localhost is allowed.
+security_test_hosts:
+  - localhost
+
 # Websites that are ALWAYS refused, even if listed above. Put production here.
 blocked_hosts:
   - example.com
