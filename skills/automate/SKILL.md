@@ -45,8 +45,23 @@ Paths: the toolkit folder is two levels above this skill's folder.
    Real passwords, OTPs and tokens are read from environment variables (`.env`),
    never written in the code.
 
-6. **One test per Ready test case** in `tests/test_<feature>.py`
-   (for an Excel workbook: one test file per tab, e.g. `tests/test_super_admin.py`):
+6. **One test file per flow, one test per Ready test case.**
+   - **Follow the project's own layout first.** If the project has a `CLAUDE.md`, an
+     existing `tests/` structure or role folders (e.g. `tests/super_admin/`), put the
+     files where that layout says and copy its naming.
+   - **Split by flow, never one big file.** A flow is one business journey, for example
+     "Register organization", "Tenant onboarding", "Suspend and restore". Find the flows
+     from the test plan / requirement sections, or from the sheet's Area / Module / tab.
+     Each flow gets its own file: `tests/[<role>/]test_<flow_name>.py`
+     (e.g. `tests/super_admin/test_tenant_onboarding.py`,
+     `tests/super_admin/test_suspend_restore.py`). Before writing, show the person the
+     list of flow files with the test case IDs in each, so they can change it.
+     A sheet with only one small flow (about 15 test cases or fewer) may stay in one file.
+   - **Shared code is not copied between flow files:** helper functions go in
+     `tests/[<role>/]helpers.py`, fixtures in `tests/[<role>/]conftest.py`. Fixtures that
+     create test data on the server (accounts, tenants, records) use `scope="session"`,
+     so the data is made once per run, not once per file.
+   - Every test inside a flow file follows these rules:
    - name: the sheet's ID with `-` turned into `_`, then a short title:
      `TC-01` -> `test_TC_01_<short_title>`, `SA-12` -> `test_SA_12_<short_title>`.
      The report matches tests to the sheet by this ID, so never change or invent IDs.
@@ -71,6 +86,9 @@ Paths: the toolkit folder is two levels above this skill's folder.
    - tests must not depend on each other; each one starts from a fresh page
 
 7. **Run the tests:** `python3 -m pytest -v --junitxml=reports/results.xml`
+   (one flow alone: `python3 -m pytest tests/<role>/test_<flow>.py -v`).
+   With role folders, keep each role's results apart: `tests/<role>` and
+   `--junitxml=reports/<role>/results.xml`.
 
 8. **When a test fails, decide why - honestly:**
    - **Test problem** (wrong locator, page not loaded yet): fix the test and run again.
@@ -91,6 +109,9 @@ Paths: the toolkit folder is two levels above this skill's folder.
     It writes `reports/report.html` and the same results as Excel, `reports/report.xlsx`
     (tabs: Summary, Problems, All test cases). Every failure gets a reason: possible app
     bug, test needs updating, test out of step with the sheet, or environment.
+    With role folders: add `--results reports/<role>/results.xml --out reports/<role>/report.html`
+    (the Excel file is written next to it). The report matches tests by TC ID, so it is
+    the same whether the tests are in one file or split by flow.
 
 12. **Summary in plain words:** how many test cases were automated, passed, failed,
     blocked and not automated; how many failures are possible app bugs and how many are
