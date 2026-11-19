@@ -46,3 +46,12 @@ blocked_hosts:
 #   block_on_bug_priority: [critical, high] # possible app bug on these priorities = blocker
 #   a11y_block_on: critical                 # or serious
 #   max_age_days: 7                         # older results count as a risk
+
+# Smart regression (/qa-toolkit:smart): smoke tests that always run (optional)
+# smart:
+#   always: [TC-01]
+#
+# Test data cleanup (/qa-toolkit:data): how to delete each kind of record tests create (optional)
+# test_data:
+#   cleanup:
+#     task: {method: DELETE, url: "https://staging.example.com/api/tasks/{id}", token_env: API_TOKEN}

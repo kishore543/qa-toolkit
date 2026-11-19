@@ -22,6 +22,10 @@ shows every test case in words anyone can understand: what passed, what failed, 
 | `/qa-toolkit:a11y` | Accessibility (WCAG 2.1 / 2.2 AA): axe-core scan, a keyboard-only walk (focus visible, no trap, nothing left out) and a 320px phone-width check. Read-only. Each problem: severity, who it affects, WCAG rule, how to fix, screenshot. | `reports/a11y/a11y-report.html` |
 | `/qa-toolkit:bug` | Bug reports from the results: only real app problems (failed tests that look like app bugs, browser-only failures, accessibility problems), each checked by hand first. Files the ones you pick in Jira - dry run first, screenshot attached, no duplicates - or exports a Jira CSV. | `reports/bugs/bugs.html`, Jira issues |
 | `/qa-toolkit:release` | Go / no-go: combines every result (tests, browsers, accessibility, load, security, bugs filed) into one page - READY TO RELEASE / READY WITH RISKS / NOT READY - with blockers, risks, what was not tested, sign-off lines and a summary to paste into chat. | `reports/release/release-report.html` |
+| `/qa-toolkit:flaky` | Flaky test tracker: remembers every run; sorts tests into Flaky / Broke recently / Broken / Fixed / Stable; re-runs tests N times to measure. | `reports/history/flaky-report.html` |
+| `/qa-toolkit:smart` | Smart regression: from release notes or changed files, picks only the affected tests (with the reason), plus smoke tests. | `reports/smart/tests.txt` + the pytest command |
+| `/qa-toolkit:explore` | Exploratory agent: walks the app read-only (links + tabs) and reports crashes, 5xx, failed calls, broken links / images, slow pages, "undefined" / "NaN" on screen. | `reports/explore/explore-report.html` |
+| `/qa-toolkit:data` | Test data: realistic rows + edge cases as CSV / Excel; tracks what tests create; safe cleanup (dry run first, tracked records only). | `test_data/generated/`, `test_data/created.jsonl` |
 | `/qa-toolkit:security` | Safe security checks on QA/staging: HTTPS & headers, cookies, who-can-see-what, bad input (XSS/SQL), login rate limits. Each problem gets a severity and a fix. Not a full pen-test. | `reports/security/security-report.html` |
 
 **The reports** (`reports/report.html` and `reports/report.xlsx`):
@@ -76,7 +80,7 @@ In Claude Code, type:
 /plugin install qa-toolkit --marketplace kishore543/qa-toolkit
 ```
 Then **restart Claude Code** (type `/exit` and start `claude` again) - commands load at start-up.
-Type `/qa-toolkit:` and you should see the eleven commands.
+Type `/qa-toolkit:` and you should see the fifteen commands.
 
 **Get the latest version later:** `/plugin marketplace update kishore-qa`, then restart.
 
