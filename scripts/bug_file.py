@@ -194,6 +194,12 @@ def cmd_file(args, conf, login, data, path):
         chosen = [b for b in chosen if b["id"] not in done]
     if not chosen:
         return
+    refused = [b["id"] for b in chosen if b.get("status") == "not-a-bug"]
+    if refused:
+        print("Marked NOT A BUG after the hand check (never filed): " + ", ".join(refused))
+        chosen = [b for b in chosen if b["id"] not in refused]
+        if not chosen:
+            return
     unsure = [b["id"] for b in chosen if b.get("check_first")]
     if unsure:
         print("Marked 'check by hand first': %s - file only if you confirmed them." % ", ".join(unsure))

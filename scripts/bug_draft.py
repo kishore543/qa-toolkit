@@ -278,7 +278,8 @@ def build_html(title, drafts, skipped, env):
             '<button class="btn" data-copy="d-%s">Copy description</button></div>'
             '<textarea hidden id="t-%s">%s</textarea><textarea hidden id="d-%s">%s</textarea></article>' % (
                 b["id"], b["id"], SEV_CSS.get(b["severity"], "none"), esc(b["severity"]), esc(b["priority"]), esc(b["source"]), esc(b["ref"]),
-                '<span class="pill warn">🔎 Check by hand first</span>' if b.get("check_first") else "",
+                {"confirmed": '<span class="pill good">✅ Confirmed by hand</span>', "not-a-bug": '<span class="pill none">❌ Not a bug - do not file</span>'}.get(
+                    b.get("status"), '<span class="pill warn">🔎 Check by hand first</span>' if b.get("check_first") else ""),
                 esc(b["title"]), esc(b["why_bug"]),
                 ('<h4>Preconditions</h4><p>%s</p>' % esc(b["preconditions"])) if b.get("preconditions") else "",
                 ('<h4>Steps to reproduce</h4><ol>%s</ol>' % steps) if steps else "",
@@ -317,7 +318,7 @@ TEMPLATE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
  .bh { display:flex; flex-wrap:wrap; gap:8px; align-items:center; } .bid { font:700 13px ui-monospace, Menlo, monospace; background:var(--none-bg); padding:2px 8px; border-radius:6px; }
  .src { color:var(--ink3); font-size:13px; } .bug h3 { margin:10px 0 4px; font-size:17px; } .why { color:var(--ink2); margin:0 0 6px; font-size:14px; }
  .pill { font-size:12.5px; font-weight:600; padding:2px 9px; border-radius:999px; } .pill.crit { background:var(--crit-bg); } .pill.serious { background:var(--serious-bg); }
- .pill.warn { background:var(--warn-bg); } .pill.none { background:var(--none-bg); }
+ .pill.warn { background:var(--warn-bg); } .pill.none { background:var(--none-bg); } .pill.good { background:#e6f5e6; }
  .grid { display:grid; grid-template-columns:1fr minmax(0, 400px); gap:18px; } h4 { margin:12px 0 2px; font-size:13px; color:var(--ink3); text-transform:uppercase; letter-spacing:.06em; }
  .grid p { margin:0; } ol { margin:4px 0 0; padding-left:20px; }
  figure { margin:12px 0 0; } figure img { width:100%; max-height:320px; object-fit:contain; object-position:top left; border:1px solid var(--line); border-radius:8px; background:#fff; }
