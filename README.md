@@ -18,6 +18,7 @@ shows every test case in words anyone can understand: what passed, what failed, 
 | `/qa-toolkit:heal` | When tests break because the screen changed, finds the element again and fixes the locator - only after you approve. Never hides a real bug. | Fixed locators + `reports/heal-log.md` |
 | `/qa-toolkit:load` | Load test: up to **100 virtual users** at the same time on QA/staging, stepping up 1 → 5 → 20 → 50 → 100. Logs each user in once (email + OTP, password or token from `.env`). | `reports/load/load-report.html` |
 | `/qa-toolkit:browsers` | Cross-browser: runs your existing tests in Chrome, Firefox, Safari (WebKit), Edge and imitated iPhone / Android screens. Re-tries browser-only failures so flaky tests are not called browser bugs. | `reports/browsers/browser-report.html` |
+| `/qa-toolkit:a11y` | Accessibility (WCAG 2.1 / 2.2 AA): axe-core scan, a keyboard-only walk (focus visible, no trap, nothing left out) and a 320px phone-width check. Read-only. Each problem: severity, who it affects, WCAG rule, how to fix, screenshot. | `reports/a11y/a11y-report.html` |
 | `/qa-toolkit:security` | Safe security checks on QA/staging: HTTPS & headers, cookies, who-can-see-what, bad input (XSS/SQL), login rate limits. Each problem gets a severity and a fix. Not a full pen-test. | `reports/security/security-report.html` |
 
 **The reports** (`reports/report.html` and `reports/report.xlsx`):
@@ -35,6 +36,11 @@ how many users, typical and slowest answers per page, charts of users vs. speed,
 **The cross-browser report** (`reports/browsers/browser-report.html`): *WORKS IN ALL BROWSERS / BROWSER PROBLEMS FOUND*,
 a card per browser with its version and pass rate, every browser-specific failure with the screenshot
 from that browser, and a test-case x browser table with an "only differences" filter.
+
+**The accessibility report** (`reports/a11y/a11y-report.html`): *NO PROBLEMS FOUND / NEEDS FIXES / NOT ACCESSIBLE YET*,
+problems grouped across pages (Critical / Serious / Moderate / Minor), who each one hurts (e.g. screen reader
+or keyboard users), the WCAG rule, how to fix it, the failing element outlined in a screenshot, and the manual
+checks automation cannot do.
 
 **The security report** (`reports/security/security-report.html`): *PASSED / NEEDS FIXES / NOT SAFE YET*,
 each problem with a severity (High / Medium / Low), what it means for users and how to fix it,
@@ -63,7 +69,7 @@ In Claude Code, type:
 /plugin install qa-toolkit --marketplace kishore543/qa-toolkit
 ```
 Then **restart Claude Code** (type `/exit` and start `claude` again) - commands load at start-up.
-Type `/qa-toolkit:` and you should see the seven commands.
+Type `/qa-toolkit:` and you should see the eight commands.
 
 **Get the latest version later:** `/plugin marketplace update kishore-qa`, then restart.
 
@@ -121,6 +127,12 @@ Cross-browser (start with one short flow - each browser is a full run):
 ```
 Or run one browser yourself: `python3 -m pytest tests/test_login.py --qa-browser firefox`.
 
+Accessibility (read-only, safe on QA):
+```
+/qa-toolkit:a11y      Login, dashboard and settings pages on https://staging.example.com
+```
+Pages behind a login use a saved sign-in (`--state`) that you make by signing in yourself once.
+
 Security check (tell the developers first):
 ```
 /qa-toolkit:security   https://staging.example.com - safe checks, then access, input and login limits
@@ -130,6 +142,10 @@ It runs safest-first and asks before the login-abuse step. Each problem gets a s
 Already have test cases in Excel? Skip the first two steps:
 `/qa-toolkit:automate "Login Test Cases.xlsx"` - it reads any column names and all tabs,
 and never edits your file.
+
+## Credits
+
+Accessibility checks use [axe-core](https://github.com/dequelabs/axe-core) by Deque Systems (MPL-2.0), shipped unmodified in `vendor/axe-core/`.
 
 ## Rules the toolkit follows
 
@@ -162,6 +178,7 @@ python3 -m pytest --bug-report
 | Security check says `NOT SAFE YET` | At least one High problem - the report says what and how to fix it |
 | `unrecognized arguments: --qa-browser` | Your `conftest.py` is older - add the browser switch from the toolkit's conftest template (`/qa-toolkit:browsers` does it for you) |
 | Cross-browser card says `Not installed` | `python3 -m playwright install firefox webkit` (with the project's Python) |
+| Accessibility page shows `ended on .../login - signed in?` | The page needs a login: make a saved sign-in with `a11y_check.py --save-state .auth/state.json <login URL>` and pass `--state` |
 | Install fails with "repository not found" | You don't have access to the private repo yet - ask Kishore |
 
 ## For the maintainer
