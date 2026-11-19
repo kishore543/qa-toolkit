@@ -42,7 +42,7 @@ blocked_hosts:
 
 # Release dashboard rules, for /qa-toolkit:release (optional - these are the defaults):
 # release:
-#   required: [functional]                  # areas that must be tested
+#   required: [functional]                  # must be tested: functional, api, browsers, a11y, load, security
 #   block_on_bug_priority: [critical, high] # possible app bug on these priorities = blocker
 #   a11y_block_on: critical                 # or serious
 #   max_age_days: 7                         # older results count as a risk

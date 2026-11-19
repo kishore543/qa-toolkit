@@ -82,9 +82,9 @@ def link(path, out_dir):
 
 # ---------- the areas ----------
 
-def functional(cases, reports, conf, out_dir):
-    a = area("functional", "Functional tests", "🤖")
-    xml = os.path.join(reports, "results.xml")
+def functional(cases, reports, conf, out_dir, xml=None, key="functional", name="Functional tests", icon="🤖", report_name="report.html"):
+    a = area(key, name, icon)
+    xml = xml or os.path.join(reports, "results.xml")
     if not (cases and os.path.isfile(xml)):
         if os.path.isfile(xml):
             a["notes"].append("results.xml exists but no --cases sheet was given, so it was not read.")
@@ -95,7 +95,7 @@ def functional(cases, reports, conf, out_dir):
     c, by = counts_of(rows), cause_counts(rows)
     ran = c["Passed"] + c["Failed"] + c["Skipped"]
     a["when"] = info["started"].replace(tzinfo=None) if info.get("started") else None
-    a["report"] = link(os.path.join(reports, "report.html"), out_dir)
+    a["report"] = link(os.path.join(os.path.dirname(xml), report_name), out_dir)
     a["numbers"] = ["%d test cases" % len(rows), "%d ran" % ran, "%d passed" % c["Passed"], "%d failed" % c["Failed"],
                     "%d%% pass rate" % (round(100.0 * c["Passed"] / ran) if ran else 0)]
     for r in rows:
@@ -120,6 +120,20 @@ def functional(cases, reports, conf, out_dir):
     settle(a)
     a["headline"] = {"block": "Possible app bugs on important test cases", "risk": "No serious app bug, but gaps to close",
                      "pass": "Every test case that ran passed"}[a["status"]]
+    return a
+
+
+def api(reports, conf, out_dir):
+    run_file = os.path.join(reports, "api", "run.json")
+    if not os.path.isfile(run_file):
+        return area("api", "API", "🔌")
+    with open(run_file) as f:
+        run = json.load(f)
+    a = functional(run["sheet"], reports, conf, out_dir, xml=os.path.join(reports, "api", "results.xml"),
+                   key="api", name="API", icon="🔌", report_name="api-report.html")
+    if not run.get("writes"):
+        a["notes"].append("Read-only run (GET only) - create / update / delete were not tested")
+    a["headline"] = a["headline"].replace("test cases", "API checks")
     return a
 
 
@@ -428,7 +442,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     title = args.title or "Release check"
 
-    areas = [functional(args.cases, args.reports, conf, out_dir), browsers(args.reports, conf, out_dir, args.cases),
+    areas = [functional(args.cases, args.reports, conf, out_dir), api(args.reports, conf, out_dir), browsers(args.reports, conf, out_dir, args.cases),
              accessibility(args.reports, conf, out_dir), load(args.reports, conf, out_dir), security(args.reports, conf, out_dir)]
     stale(areas, conf)
     filed, jira_base = bugs_filed(args.reports)

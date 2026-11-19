@@ -1,7 +1,7 @@
 {
   "name": "qa-toolkit",
-  "version": "0.8.0",
-  "description": "QA skills: test plan, test cases, Playwright automation, self-heal, cross-browser testing (Chrome, Firefox, Safari, Edge, mobile screens), accessibility (WCAG 2.1/2.2 AA: axe-core, keyboard, reflow), Jira-ready bug reports (dry run first, no duplicates), release go/no-go dashboard, load testing (up to 100 users), safe security checks, plain-language HTML + Excel reports, with a safety guard that only allows test sites",
+  "version": "0.9.0",
+  "description": "QA skills: test plan, test cases, Playwright automation, API testing from OpenAPI, self-heal, cross-browser testing (Chrome, Firefox, Safari, Edge, mobile screens), accessibility (WCAG 2.1/2.2 AA: axe-core, keyboard, reflow), Jira-ready bug reports (dry run first, no duplicates), release go/no-go dashboard, load testing (up to 100 users), safe security checks, plain-language HTML + Excel reports, with a safety guard that only allows test sites",
   "author": {
     "name": "Kishore"
   }

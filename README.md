@@ -15,6 +15,7 @@ shows every test case in words anyone can understand: what passed, what failed, 
 | `/qa-toolkit:plan` | Writes a test plan from a requirement, user story or page. Asks up to 5 questions instead of guessing. | `test-plans/<feature>-test-plan.md` |
 | `/qa-toolkit:cases` | Writes test cases from the plan: normal use, wrong input, edge cases, security basics. Every case is linked to a requirement. | `test-cases/<feature>-test-cases.csv` + a coverage table |
 | `/qa-toolkit:automate` | Automates the test cases from a CSV **or Excel** sheet as Playwright + Python (pytest) tests, runs them and builds the report. | `pages/`, `tests/`, `test_data/`, `reports/` |
+| `/qa-toolkit:api` | API tests from an OpenAPI / Swagger description: valid data, no login / wrong token, missing or wrong fields, unknown id, answer shape. GET only unless you allow writes; deletes only what it created. Same report as the UI tests. | `test-cases/api/`, `reports/api/api-report.html` |
 | `/qa-toolkit:heal` | When tests break because the screen changed, finds the element again and fixes the locator - only after you approve. Never hides a real bug. | Fixed locators + `reports/heal-log.md` |
 | `/qa-toolkit:load` | Load test: up to **100 virtual users** at the same time on QA/staging, stepping up 1 → 5 → 20 → 50 → 100. Logs each user in once (email + OTP, password or token from `.env`). | `reports/load/load-report.html` |
 | `/qa-toolkit:browsers` | Cross-browser: runs your existing tests in Chrome, Firefox, Safari (WebKit), Edge and imitated iPhone / Android screens. Re-tries browser-only failures so flaky tests are not called browser bugs. | `reports/browsers/browser-report.html` |
@@ -75,7 +76,7 @@ In Claude Code, type:
 /plugin install qa-toolkit --marketplace kishore543/qa-toolkit
 ```
 Then **restart Claude Code** (type `/exit` and start `claude` again) - commands load at start-up.
-Type `/qa-toolkit:` and you should see the ten commands.
+Type `/qa-toolkit:` and you should see the eleven commands.
 
 **Get the latest version later:** `/plugin marketplace update kishore-qa`, then restart.
 
@@ -138,6 +139,12 @@ Accessibility (read-only, safe on QA):
 /qa-toolkit:a11y      Login, dashboard and settings pages on https://staging.example.com
 ```
 Pages behind a login use a saved sign-in (`--state`) that you make by signing in yourself once.
+
+API tests (ask the developers for the OpenAPI / Swagger file first):
+```
+/qa-toolkit:api       https://staging.example.com/openapi.json
+```
+Practice: `python3 demo/api_demo_app.py` is a small API with 4 bugs planted on purpose.
 
 End of the sprint - can we release?
 ```
