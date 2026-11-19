@@ -2,6 +2,7 @@
 #   python3 -m pip install -r requirements.txt
 # then install the browser once:
 #   python3 -m playwright install chromium
+# (cross-browser tests also need: python3 -m playwright install firefox webkit)
 pyyaml>=6.0
 openpyxl>=3.1
 pytest>=8.0

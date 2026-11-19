@@ -1,7 +1,7 @@
 {
   "name": "qa-toolkit",
-  "version": "0.4.3",
-  "description": "QA skills: test plan, test cases, Playwright automation, self-heal, load testing (up to 100 users), safe security checks, plain-language HTML + Excel reports, with a safety guard that only allows test sites",
+  "version": "0.5.0",
+  "description": "QA skills: test plan, test cases, Playwright automation, self-heal, cross-browser testing (Chrome, Firefox, Safari, Edge, mobile screens), load testing (up to 100 users), safe security checks, plain-language HTML + Excel reports, with a safety guard that only allows test sites",
   "author": {
     "name": "Kishore"
   }

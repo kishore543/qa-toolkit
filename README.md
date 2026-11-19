@@ -17,6 +17,7 @@ shows every test case in words anyone can understand: what passed, what failed, 
 | `/qa-toolkit:automate` | Automates the test cases from a CSV **or Excel** sheet as Playwright + Python (pytest) tests, runs them and builds the report. | `pages/`, `tests/`, `test_data/`, `reports/` |
 | `/qa-toolkit:heal` | When tests break because the screen changed, finds the element again and fixes the locator - only after you approve. Never hides a real bug. | Fixed locators + `reports/heal-log.md` |
 | `/qa-toolkit:load` | Load test: up to **100 virtual users** at the same time on QA/staging, stepping up 1 → 5 → 20 → 50 → 100. Logs each user in once (email + OTP, password or token from `.env`). | `reports/load/load-report.html` |
+| `/qa-toolkit:browsers` | Cross-browser: runs your existing tests in Chrome, Firefox, Safari (WebKit), Edge and imitated iPhone / Android screens. Re-tries browser-only failures so flaky tests are not called browser bugs. | `reports/browsers/browser-report.html` |
 | `/qa-toolkit:security` | Safe security checks on QA/staging: HTTPS & headers, cookies, who-can-see-what, bad input (XSS/SQL), login rate limits. Each problem gets a severity and a fix. Not a full pen-test. | `reports/security/security-report.html` |
 
 **The reports** (`reports/report.html` and `reports/report.xlsx`):
@@ -30,6 +31,10 @@ shows every test case in words anyone can understand: what passed, what failed, 
 **The load report** (`reports/load/load-report.html`): *PASSED / FAILED / COULD NOT TEST*,
 how many users, typical and slowest answers per page, charts of users vs. speed, and
 "answers first became slow at about N users" when that happens.
+
+**The cross-browser report** (`reports/browsers/browser-report.html`): *WORKS IN ALL BROWSERS / BROWSER PROBLEMS FOUND*,
+a card per browser with its version and pass rate, every browser-specific failure with the screenshot
+from that browser, and a test-case x browser table with an "only differences" filter.
 
 **The security report** (`reports/security/security-report.html`): *PASSED / NEEDS FIXES / NOT SAFE YET*,
 each problem with a severity (High / Medium / Low), what it means for users and how to fix it,
@@ -49,6 +54,7 @@ project's `qa-toolkit.yaml`. Anything else - including production - is refused.
    python3 -m pip install pyyaml openpyxl pytest playwright locust requests
    python3 -m playwright install chromium
    ```
+   For cross-browser tests also: `python3 -m playwright install firefox webkit`
 
 ## Install
 
@@ -57,7 +63,7 @@ In Claude Code, type:
 /plugin install qa-toolkit --marketplace kishore543/qa-toolkit
 ```
 Then **restart Claude Code** (type `/exit` and start `claude` again) - commands load at start-up.
-Type `/qa-toolkit:` and you should see the six commands.
+Type `/qa-toolkit:` and you should see the seven commands.
 
 **Get the latest version later:** `/plugin marketplace update kishore-qa`, then restart.
 
@@ -109,6 +115,12 @@ Load test (tell the developers first):
 It starts with 1 user and asks before every bigger step. Practice safely on your own computer
 first: `python3 demo/load_demo_app.py` (in the toolkit folder) is a small site that gets slow on purpose.
 
+Cross-browser (start with one short flow - each browser is a full run):
+```
+/qa-toolkit:browsers   tests/test_login.py in Chrome, Firefox and Safari
+```
+Or run one browser yourself: `python3 -m pytest tests/test_login.py --qa-browser firefox`.
+
 Security check (tell the developers first):
 ```
 /qa-toolkit:security   https://staging.example.com - safe checks, then access, input and login limits
@@ -148,6 +160,8 @@ python3 -m pytest --bug-report
 | `Locust is not installed` | `python3 -m pip install --user locust` |
 | `is not in security_test_hosts` | Security checks need their own list in `qa-toolkit.yaml` - add only your QA/staging site |
 | Security check says `NOT SAFE YET` | At least one High problem - the report says what and how to fix it |
+| `unrecognized arguments: --qa-browser` | Your `conftest.py` is older - add the browser switch from the toolkit's conftest template (`/qa-toolkit:browsers` does it for you) |
+| Cross-browser card says `Not installed` | `python3 -m playwright install firefox webkit` (with the project's Python) |
 | Install fails with "repository not found" | You don't have access to the private repo yet - ask Kishore |
 
 ## For the maintainer

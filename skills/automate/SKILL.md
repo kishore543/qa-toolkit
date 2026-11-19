@@ -28,7 +28,8 @@ Paths: the toolkit folder is two levels above this skill's folder.
      must be in `allowed_hosts`. If not, stop and tell the person.
    - If there is no `conftest.py`, copy `templates/conftest.py` to the project root.
      If there is one, do not overwrite it - make sure it has the safety guard and
-     the screenshot-on-failure parts from the template.
+     the screenshot-on-failure parts from the template. The template also has the
+     `--qa-browser` switch that `/qa-toolkit:browsers` needs; add it if it is missing.
 
 3. **Explore the real pages first.** Open each page with the Playwright browser tool
    and look at the page before writing locators. Never guess a locator.
