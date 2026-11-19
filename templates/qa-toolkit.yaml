@@ -29,3 +29,20 @@ security_test_hosts:
 blocked_hosts:
   - example.com
   - www.example.com
+
+# Jira, for /qa-toolkit:bug (optional). No secrets here - the login goes in .env:
+#   JIRA_BASE_URL=https://your-company.atlassian.net
+#   JIRA_EMAIL=you@company.com
+#   JIRA_API_TOKEN=...   (https://id.atlassian.com/manage-profile/security/api-tokens)
+# jira:
+#   project_key: ABC      # letters before the dash, e.g. ABC-123
+#   issue_type: Bug
+#   labels: [my-project]
+#   env_file: .env
+
+# Release dashboard rules, for /qa-toolkit:release (optional - these are the defaults):
+# release:
+#   required: [functional]                  # areas that must be tested
+#   block_on_bug_priority: [critical, high] # possible app bug on these priorities = blocker
+#   a11y_block_on: critical                 # or serious
+#   max_age_days: 7                         # older results count as a risk

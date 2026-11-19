@@ -76,6 +76,8 @@ PLAIN = {  # axe rule -> (plain title, how to fix)
     "aria-valid-attr-value": ("ARIA attributes have wrong values", "Fix the values (e.g. aria-controls must point at an existing id)."),
     "landmark-unique": ("Landmarks cannot be told apart", "Give repeated landmarks (two <nav>s ...) different aria-labels."),
     "landmark-complementary-is-top-level": ("Side areas are nested inside other landmarks", "Move <aside> to the top level."),
+    "label-content-name-mismatch": ("The spoken name of a button does not match its visible text",
+                                    "Start the aria-label with the visible text (visible 'Super Admin' -> aria-label 'Super Admin, switch workspace'), or remove the aria-label so the visible text is used."),
     "bypass": ("No way to skip to the main content", "Add a 'Skip to main content' link or a <main> landmark."),
 }
 
